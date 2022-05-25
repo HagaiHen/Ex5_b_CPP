@@ -1,0 +1,4 @@
+OrgChart(const OrgChart &oc) noexcept = default; // copy constructor
+            OrgChart& operator=(const OrgChart &oc) = default; // copy assignment
+            OrgChart& operator=(OrgChart &&oc) = default; // move assignment
+            OrgChart ( OrgChart && oc) = default; // move constructor

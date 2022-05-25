@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <stack>
 
-#define MAX_VALUE 1000000000
-
 using namespace std;
 
 
@@ -16,9 +14,9 @@ namespace ariel {
 
         private:
             string data;
-            Node* parent;
+            Node* parent = nullptr;
             vector<Node*> childs;
-            int level;
+            int level = 0;
 
         public:
             Node(const string &d) : data(d) {}
@@ -30,7 +28,7 @@ namespace ariel {
                 stream << n.data;
                 return stream;
             }
-            int get_level() {return this->level; };
+            int get_level() const {return this->level; };
             void set_level(int l) {this->level = l; };
 
             vector<Node*> get_childs() { return this->childs; };
@@ -54,7 +52,7 @@ namespace ariel {
                 vector<Node*> tmp;
                 tmp.push_back(this->curr);
                 this->s.push_back(this->curr);
-                while (tmp.size() > 0) {
+                while (!tmp.empty()) {
                         this->curr = tmp.front();
                         tmp.erase(tmp.begin());
                         for (size_t i = 0; i < curr->get_childs().size(); i++) { //get all the childs and adding them
@@ -68,15 +66,22 @@ namespace ariel {
                 this->s.erase(this->s.begin());
             }
 
+            // Node* at (size_t index) {
+            //     return this->s.at(index);
+            // }
+
+            // size_t len () {
+            //     return this->s.size();
+            // }
+
             Node* get_curr () {
                 return this->curr;
             }
 
             LevelIter& operator++() { //simply roll all over the vector
-                if (this->s.size() == 0) {
+                if (this->s.empty()) {
                     this->curr = nullptr;
                     return *this;
-                    //cout << "hhh" << endl;
                 }
 
                 this->curr = this->s.front();
@@ -113,7 +118,10 @@ namespace ariel {
             }
 
             string operator*() {
-                return this->curr->get_data();
+                if (this->curr != nullptr) {
+                    return this->curr->get_data();
+                }
+                return "";
             }
 
             bool operator==(const LevelIter& other) const {
@@ -147,10 +155,10 @@ namespace ariel {
                 vector<Node*> tmp;
                 tmp.push_back(this->curr);
                 this->s.push_back(this->curr);
-                while (tmp.size() > 0) {
+                while (!tmp.empty()) {
                     this->curr = tmp.front();
                     tmp.erase(tmp.begin());                    
-                    for (int i = curr->get_childs().size() - 1; i >= 0; i--) {
+                    for (int i = (int)curr->get_childs().size() - 1; i >= 0; i--) {
                         s.push_back(this->curr->get_childs()[(size_t)i]);
                         tmp.push_back(this->curr->get_childs()[(size_t)i]);
                     }
@@ -173,7 +181,7 @@ namespace ariel {
             }
 
             RevLevelIter& operator++() { //simply roll all over the vector
-                if (this->s.size() == 0) {
+                if (this->s.empty()) {
                     this->curr = nullptr;
                     return *this;
                 }
@@ -248,7 +256,7 @@ namespace ariel {
                     Node* tmp = Stack.top();
                     Stack.pop();
                     this->s.push_back(tmp); //add to the final list
-                    for (int i = tmp->get_childs().size() - 1; i >= 0; i--) { //push all the childs from right to left
+                    for (int i = (int)tmp->get_childs().size() - 1; i >= 0; i--) { //push all the childs from right to left
                         Stack.push(tmp->get_childs()[(size_t)i]);
                     }      
                 }
@@ -259,7 +267,7 @@ namespace ariel {
             }
 
             PreOrderIter& operator++() { //simply roll over the vector
-                if (this->s.size() == 0) {
+                if (this->s.empty()) {
                     this->curr = nullptr;
                     return *this;
                 }
@@ -338,12 +346,17 @@ namespace ariel {
         public:
 
             OrgChart() : root (nullptr) {} //default constructor
+            OrgChart(const OrgChart &oc) noexcept = default; // copy constructor
+            OrgChart& operator=(const OrgChart &oc) = default; // copy assignment
+            OrgChart& operator=(OrgChart &&oc) = default; // move assignment
+            OrgChart ( OrgChart && oc) = default; // move constructor
+
 
             OrgChart& add_root (const string &s) {
-                if (s.size() == 0) {
+                if (s.empty()) {
                     throw invalid_argument("invalid name");
                 }
-                if (!this->root) {
+                if (this->root == nullptr) {
                     this->size += 1;
                     this->root = new Node(s);
                     this->root->set_data(s);
@@ -355,7 +368,7 @@ namespace ariel {
             }
             //Add a child to some father
             OrgChart& add_sub (const string &s1, const string &s2) {
-                if (s2.size() == 0) {
+                if (s2.empty()) {
                     throw invalid_argument("invalid name");
                 }
             	if (this->root == nullptr) {
@@ -417,6 +430,13 @@ namespace ariel {
                 return PreOrderIter();
             }
 
+            LevelIter beg_lvl() const {
+                return LevelIter(this->root);
+            }
+            LevelIter static end_lvl() {
+                return LevelIter();
+            }
+
             friend ostream &operator<<(ostream &stream, const OrgChart &tree) {
                 string line = "------";
                 string enter = "|";
@@ -449,12 +469,13 @@ namespace ariel {
                 return stream;
             }
             
-            LevelIter begin() {
-                return LevelIter(this->root);
+            LevelIter begin() const{
+                return this->begin_level_order();
             }
             
-            LevelIter end() {
-                return LevelIter();
+            LevelIter end() const {
+                
+                return this->end_level_order();
             }
 
             unordered_map<string, vector<Node*>> * get_childs() { return &this->childs; }; 
@@ -477,22 +498,22 @@ namespace ariel {
             Node * get_node(const string &s)  const {
                 if (this->root->get_data() == s) {
                     return this->root;
-                } else {
-                    for (const auto & [key, val] : this->childs) {
-                        for (size_t i = 0; i < val.size(); i++) {
-                            if (val[i]->get_data() == s) {
-                                return val[i];
-                            }
+                }
+                for (const auto & [key, val] : this->childs) {
+                    for (size_t i = 0; i < val.size(); i++) {
+                        if (val[i]->get_data() == s) {
+                            return val[i];
                         }
                     }
                 }
+            
                 return nullptr;
             }
 
             ~OrgChart() {
             
-                if (root) {
-                    for (auto it = begin_level_order(); it != end_level_order(); ++it) {
+                if (root != nullptr) {
+                    for (auto it = beg_lvl(); it != end_lvl(); ++it) {
                         delete it.get_curr();
                     }
                 }
